@@ -1,6 +1,7 @@
 "use strict"
 const Bittrex = require('node.bittrex.api');
 const Poloniex = require('poloniex-api-node');
+const fs = require('fs');
 const config = require('./config.js')
 const poloniex = new Poloniex();
 
@@ -66,15 +67,27 @@ const reduceCurrencies = (bit, pol, currencies) => {
       };
     });
   });
-
+  
   return mergedPrices;
 }
 
+const logData = (dataToLog, filePath) => {
+  fs.readFile(filePath, function (err, data) {
+      var json = JSON.parse(data)
+      console.log(json)
+      json.push(dataToLog)
+      fs.writeFile(filePath, JSON.stringify(json))
+  })
+}
+
 async function app () {
-  const currencyList = ["ETH", "LTC", "STRAT", "XRP", "DGB", "BTS", "ETC", "QTUM", "WAVES"];
   const bit = await getBittrexTicker();
   const pol = await getPoloniexTicker();
+  if (!bit || !pol) return;
+
+  const currencyList = ["ETH", "LTC", "STRAT", "XRP", "DGB", "BTS", "ETC", "QTUM", "WAVES"];
   const prices = reduceCurrencies(bit, pol, currencyList)
+  logData({date: new Date(), prices, prices}, "log.json") 
   console.log(prices)
 }
 
