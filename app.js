@@ -3,12 +3,8 @@ const Bittrex = require('node.bittrex.api');
 const Poloniex = require('poloniex-api-node');
 const fs = require('fs');
 const config = require('./config.js')
-const poloniex = new Poloniex();
 
-Bittrex.options({
-  'apikey' : config.bittrex.apikey,
-  'apisecret' : config.bittrex.apisecret, 
-});
+const poloniex = new Poloniex();
 
 const getBittrexTicker = () => {
   return new Promise((resolve, reject) => {
@@ -58,11 +54,13 @@ const reduceCurrencies = (bit, pol, currencies) => {
   bitPrices.forEach((b) => {
     polPrices.forEach((p) => {
       if (b.currency === p.currency) {
-        let mergedPrice = {};
-        mergedPrice.currency = b.currency;
-        mergedPrice.bitLast = b.last;
-        mergedPrice.polLast = p.last;
-        mergedPrice.diff = b.last - p.last !== 0 ? ((b.last - p.last) / ((b.last + p.last) * 0.5)) * 100 : '0'
+        const percentageDiff = ((b.last - p.last) / ((b.last + p.last) * 0.5)) * 100;
+        const mergedPrice = {
+              currency: b.currency, 
+              bitLast: b.last, 
+              polLast: p.last,
+              diff: percentageDiff
+        }
         mergedPrices.push(mergedPrice);
       };
     });
@@ -70,11 +68,10 @@ const reduceCurrencies = (bit, pol, currencies) => {
   
   return mergedPrices;
 }
-
+  
 const logData = (dataToLog, filePath) => {
   fs.readFile(filePath, function (err, data) {
       var json = JSON.parse(data)
-      console.log(json)
       json.push(dataToLog)
       fs.writeFile(filePath, JSON.stringify(json))
   })
@@ -87,8 +84,16 @@ async function app () {
 
   const currencyList = ["ETH", "LTC", "STRAT", "XRP", "DGB", "BTS", "ETC", "QTUM", "WAVES"];
   const prices = reduceCurrencies(bit, pol, currencyList)
-  logData({date: new Date(), prices, prices}, "log.json") 
+  logData({date: new Date(), prices: prices}, "./log.json") 
   console.log(prices)
 }
 
 app();
+
+
+
+
+// Bittrex.options({
+//   'apikey' : config.bittrex.apikey,
+//   'apisecret' : config.bittrex.apisecret, 
+// });
