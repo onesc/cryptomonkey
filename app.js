@@ -3,38 +3,34 @@ const Bittrex = require('node.bittrex.api');
 const Poloniex = require('poloniex-api-node');
 const fs = require('fs');
 const config = require('./config.js')
-
 const poloniex = new Poloniex();
 
-const getBittrexTicker = () => {
+const getTickers = () => {
   return new Promise((resolve, reject) => {
+    let bit, pol;
+
     Bittrex.getmarketsummaries( function( payload, err ) {
       if (err) {
         reject(err)
       } else {
-        resolve(payload.result)
+        bit = payload.result;
+        if (pol) resolve({bit: payload.result, pol})
       }
     });
-  });
-} 
 
-const getPoloniexTicker = () => {
-  return new Promise((resolve, reject) => {
     poloniex.returnTicker((err, payload) => {
       if (err) {
         reject(err)
       } else {
-        resolve(payload)
+        pol = payload;
+        if (bit) resolve({bit, pol: payload})
       }
     });
   });
 }
 
 const reduceCurrencies = (bit, pol, currencies) => {
-  let polPrices = [];
-  let bitPrices = [];
-  let mergedPrices = [];
-
+  let polPrices = [], bitPrices = [], mergedPrices = [];
   currencies.forEach((curr) => {
     const marketName = `BTC_${curr}`;
     if (pol[marketName]) { 
@@ -68,24 +64,17 @@ const reduceCurrencies = (bit, pol, currencies) => {
   
   return mergedPrices;
 }
-  
-const logData = (dataToLog, filePath) => {
-  fs.readFile(filePath, function (err, data) {
-      var json = JSON.parse(data)
-      json.push(dataToLog)
-      fs.writeFile(filePath, JSON.stringify(json))
-  })
-}
 
-async function app () {
-  const bit = await getBittrexTicker();
-  const pol = await getPoloniexTicker();
-  if (!bit || !pol) return;
-
+const app = async () => {
   const currencyList = ["ETH", "LTC", "STRAT", "XRP", "DGB", "BTS", "ETC", "QTUM", "WAVES"];
-  const prices = reduceCurrencies(bit, pol, currencyList)
-  logData({date: new Date(), prices: prices}, "./log.json") 
-  console.log(prices)
+  const tickers = await getTickers().catch((err) => { console.error(err) });
+  const prices = reduceCurrencies(tickers.bit, tickers.pol, currencyList)
+
+  fs.readFile("./log.json", function (err, data) {
+      var json = JSON.parse(data)
+      json.push({date: new Date(), prices: prices})
+      fs.writeFile("./log.json", JSON.stringify(json))
+  })
 }
 
 app();
