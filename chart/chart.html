@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>title</title>
+  </head>
+  <body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.min.js"></script>  
+</canvas><canvas id="myChart"></canvas>
+
+  </body>
+  <script src="./data.js"></script>  
+  <script type="text/javascript">
+  	var ctx = document.getElementById('myChart').getContext('2d');
+  	var logs = data;
+  	var labels = [], datasets = [];
+
+  	var rand255 = function(){
+  		return Math.floor(Math.random() * 255) + 1
+  	}
+  	
+  	logs.forEach(function(log){
+  		labels.push(log.date)
+  		
+  		log.prices.forEach(function(price){
+	  		const dataset = datasets.find(function(set){
+	  			return set.label === price.currency;
+	  		});
+
+	  		if (dataset) {
+	  			dataset.data.push(price.diff);
+	  		} else {
+	  			datasets.push({
+	  				label: price.currency,
+	  				data: [price.diff],
+	  				backgroundColor: "rgba(" + rand255() + "," + rand255() + "," + rand255() + ",0.5)"
+	  			})
+	  		}
+  		})
+  	})
+  	
+	var myChart = new Chart(ctx, {
+	  type: 'line',
+	  data: {
+	    labels: labels,
+	    datasets: datasets
+	  }
+	});
+  </script>
+</html>

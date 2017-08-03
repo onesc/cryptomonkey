@@ -66,15 +66,20 @@ const reduceCurrencies = (bit, pol, currencies) => {
 }
 
 const app = async () => {
-  const currencyList = ["ETH", "LTC", "STRAT", "XRP", "DGB", "BTS", "ETC", "QTUM", "WAVES"];
   const tickers = await getTickers().catch((err) => { console.error(err) });
-  const prices = reduceCurrencies(tickers.bit, tickers.pol, currencyList)
+  const prices = reduceCurrencies(tickers.bit, tickers.pol, config.poloMargin)
 
   fs.readFile("./log.json", function (err, data) {
       var json = JSON.parse(data)
       json.push({date: new Date(), prices: prices})
       fs.writeFile("./log.json", JSON.stringify(json))
+      fs.writeFile("../chart/data.js", "var data = " + JSON.stringify(json))
   })
+
+  const sorted = prices.sort(function(a, b){
+    return Math.abs(a.diff) - Math.abs(b.diff);
+  });
+  console.log(prices)
 }
 
 app();
