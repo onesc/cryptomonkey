@@ -14,33 +14,32 @@
   	var ctx = document.getElementById('myChart').getContext('2d');
   	var logs = data;
   	var labels = [], datasets = [];
-    var tokenFilter = ["ETH", "XRP"];
+    var tokenFilter = ["ETH", "ANS", "LTC", "DGB"];
 
   	var rand255 = function(){
   		return Math.floor(Math.random() * 255) + 1
   	}
   	
   	logs.forEach(function(log){
-  		labels.push(log.date)
-  		
+  		labels.push(log.date)	
   		log.prices.forEach(function(price){
 
         if (!tokenFilter.find(function(f) {
           return ("BTC-" + f) === price.currency;
         })) {
           return;
-        }
+        }  
 
 	  		const dataset = datasets.find(function(set){
 	  			return set.label === price.currency;
 	  		});
 
 	  		if (dataset) {
-	  			dataset.data.push(price.diff);
+	  			dataset.data.push(price.averageLast);
 	  		} else {
 	  			datasets.push({
 	  				label: price.currency,
-	  				data: [price.diff],
+	  				data: [price.averageLast],
 	  				backgroundColor: "rgba(" + rand255() + "," + rand255() + "," + rand255() + ",0.5)"
 	  			})
 	  		}

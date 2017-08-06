@@ -13,8 +13,8 @@ const getTickers = () => {
       if (err) {
         reject(err)
       } else {
-        bit = payload.result;
-        if (pol) resolve({bit: payload.result, pol})
+        bit = payload;
+        if (pol) resolve({bit: payload, pol});
       }
     });
 
@@ -23,56 +23,47 @@ const getTickers = () => {
         reject(err)
       } else {
         pol = payload;
-        if (bit) resolve({bit, pol: payload})
+        if (bit) resolve({bit, pol: payload});
       }
     });
   });
 }
 
-const reduceCurrencies = (bit, pol, currencies) => {
-  let polPrices = [], bitPrices = [], mergedPrices = [];
-  currencies.forEach((curr) => {
-    const marketName = `BTC_${curr}`;
-    if (pol[marketName]) { 
-      polPrices.push({currency: `BTC-${curr}`, last: parseFloat(pol[marketName].last), bid: parseFloat(pol[marketName].highestBid), ask: parseFloat(pol[marketName].lowestAsk)});
+const parsePolTicker = (polTicker) => {
+  let parsedPol = {}
+  Object.keys(polTicker).forEach((polkey)=> { 
+    parsedPol[polkey] = {
+      id: polTicker[polkey].id,
+      last: parseFloat(polTicker[polkey].last),
+      lowestAsk: parseFloat(polTicker[polkey].lowestAsk),
+      highestBid: parseFloat(polTicker[polkey].highestBid)
+      // percentChange, baseVolume, quoteVolume, isFrozen, high24hr, low24hr
     }
-  });
+  })
+  return parsedPol;  // poloniex return its data as strings, this function saves me from having to write parseFloat everywhere in the future
+}
 
-  currencies.forEach((curr) => {
-    const marketName =  `BTC-${curr}`;
-    bit.forEach((market) => {
-      if (market.MarketName === marketName) {
-        bitPrices.push(({currency: `BTC-${curr}`, last: market.Last, bid: market.Bid, ask: market.Ask}));
-      }
+const mapCurrencies = (bit, pol, currencies) => { 
+  return currencies.map((curr) => {
+    const p = pol[`BTC_${curr}`];
+    const b = bit.find((market) => {
+      return market.MarketName === `BTC-${curr}`;
     })
-  });
 
-  bitPrices.forEach((b) => {
-    polPrices.forEach((p) => {
-      if (b.currency === p.currency) {
-        const percentageDiff = ((b.last - p.last) / ((b.last + p.last) * 0.5)) * 100;
-        const buyBitSellPol = ((p.ask - b.bid) / ((b.bid + p.ask) * 0.5)) * 100;
-        const buyPolSellBit = ((b.ask - p.bid) / ((p.bid + b.ask) * 0.5)) * 100;
-        const mergedPrice = {
-              currency: b.currency, 
-              bitLast: b.last, 
-              polLast: p.last,
-              diff: percentageDiff,
-              buyBit: buyBitSellPol,
-              buyPol: buyPolSellBit
-        }
-        mergedPrices.push(mergedPrice);
-      };
-    });
-  });
-  
-  return mergedPrices;
+    if (b && p) {
+      return {
+        currency: `BTC-${curr}`,
+        averageLast: (b.Last + p.last) / 2,
+        buyBit: ((p.lowestAsk - b.Bid) / ((b.Bid + p.lowestAsk)) * 0.5) * 100,
+        buyPol: ((b.Ask - p.highestBid) / ((p.highestBid) + b.Ask) * 0.5) * 100
+      } 
+    }
+  }).filter(function (item) { return item; });
 }
 
 const app = async () => {
   const tickers = await getTickers().catch((err) => { console.error(err) });
-  // console.log(tickers.pol)
-  const prices = reduceCurrencies(tickers.bit, tickers.pol, config.tokens)
+  const prices = mapCurrencies(tickers.bit.result, parsePolTicker(tickers.pol), config.tokens)
 
   fs.readFile("./log.json", function (err, data) {
       var json = JSON.parse(data)
@@ -82,19 +73,12 @@ const app = async () => {
   })
 
   const sorted = prices.sort(function(a, b){
-    return Math.abs(a.diff) - Math.abs(b.diff);
+    return a.buyBit > a.buyPol ? Math.abs(a.buyBit) - Math.abs(b.buyBit) : Math.abs(a.buyPol) - Math.abs(b.buyPol);
   });
-  console.log(prices)
 
-  setTimeout(app, 30000);
+  console.log(sorted)
+
+  setTimeout(app, 600000);
 }
 
 app();
-
-
-
-
-// Bittrex.options({
-//   'apikey' : config.bittrex.apikey,
-//   'apisecret' : config.bittrex.apisecret, 
-// });
