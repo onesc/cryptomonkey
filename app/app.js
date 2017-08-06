@@ -3,7 +3,6 @@ const Bittrex = require('node.bittrex.api');
 const Poloniex = require('poloniex-api-node');
 const fs = require('fs');
 const config = require('./config.js')
-const poloniex = new Poloniex();
 
 const getTickers = () => {
   return new Promise((resolve, reject) => {
@@ -14,33 +13,33 @@ const getTickers = () => {
         reject(err)
       } else {
         bit = payload;
-        if (pol) resolve({bit: payload, pol});
+        if (pol) resolve({bit, pol});
       }
     });
 
-    poloniex.returnTicker((err, payload) => {
+    new Poloniex().returnTicker((err, payload) => {
       if (err) {
         reject(err)
       } else {
         pol = payload;
-        if (bit) resolve({bit, pol: payload});
+        if (bit) resolve({bit, pol});
       }
     });
   });
 }
 
-const parsePolTicker = (polTicker) => {
-  let parsedPol = {}
+const reducePolTicker = (polTicker) => {
+  let parsedData = {}
   Object.keys(polTicker).forEach((polkey)=> { 
-    parsedPol[polkey] = {
+    parsedData[polkey] = {
       id: polTicker[polkey].id,
       last: parseFloat(polTicker[polkey].last),
       lowestAsk: parseFloat(polTicker[polkey].lowestAsk),
       highestBid: parseFloat(polTicker[polkey].highestBid)
-      // percentChange, baseVolume, quoteVolume, isFrozen, high24hr, low24hr
+      // percentChange, baseVolume, quoteVolume, isFrozen, high24hr, low24hr; other properties we can use
     }
   })
-  return parsedPol;  // poloniex return its data as strings, this function saves me from having to write parseFloat everywhere in the future
+  return parsedData;  
 }
 
 const mapCurrencies = (bit, pol, currencies) => { 
@@ -58,27 +57,28 @@ const mapCurrencies = (bit, pol, currencies) => {
         buyPol: ((b.Ask - p.highestBid) / ((p.highestBid) + b.Ask) * 0.5) * 100
       } 
     }
-  }).filter(function (item) { return item; });
+  }).filter((item) => { return item; });
 }
 
 const app = async () => {
   const tickers = await getTickers().catch((err) => { console.error(err) });
-  const prices = mapCurrencies(tickers.bit.result, parsePolTicker(tickers.pol), config.tokens)
 
-  fs.readFile("./log.json", function (err, data) {
+  const prices = mapCurrencies(tickers.bit.result, reducePolTicker(tickers.pol), config.tokens)
+
+  fs.readFile("./log.json", (err, data) => {
       var json = JSON.parse(data)
       json.push({date: new Date(), prices: prices})
       fs.writeFile("./log.json", JSON.stringify(json))
       fs.writeFile("../chart/data.js", "var data = " + JSON.stringify(json))
   })
 
-  const sorted = prices.sort(function(a, b){
+  setTimeout(app, 300000);
+
+  const sorted = prices.sort((a, b) => {
     return a.buyBit > a.buyPol ? Math.abs(a.buyBit) - Math.abs(b.buyBit) : Math.abs(a.buyPol) - Math.abs(b.buyPol);
   });
 
   console.log(sorted)
-
-  setTimeout(app, 600000);
 }
 
 app();
