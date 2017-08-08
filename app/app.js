@@ -3,6 +3,9 @@ const Bittrex = require('node.bittrex.api');
 const Poloniex = require('poloniex-api-node');
 const fs = require('fs');
 const config = require('./config.js')
+const apikeys = require('./apikeys');
+
+Bittrex.options(apikeys.bittrex);
 
 const getTickers = () => {
   return new Promise((resolve, reject) => {
@@ -27,6 +30,21 @@ const getTickers = () => {
     });
   });
 }
+
+const makeBittrexOrder = (market, quantity, rate, buyOrSell) => {
+  return new Promise((resolve, reject) => {
+    const url = `https://bittrex.com/api/v1.1/market/${buyOrSell}limit?apikey=${apikeys.bittrex.apikey}&market=${market}&quantity=${quantity}&rate=${rate}`;
+    Bittrex.sendCustomRequest( url, function( data, err ) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data);
+        }
+    }, true);
+  });
+}
+// await makeBittrexOrder('BTC-ETH', 0.01, 0.079, 'sell').catch((err) => { console.error(err) });
+
 
 const reducePolTicker = (polTicker) => {
   let parsedData = {}
