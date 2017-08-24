@@ -4,7 +4,8 @@ const config = require('./config.js')
 const apikeys = require('./apikeys');
 console.log(api)
 
-// await makeBittrexOrder('BTC-ETH', 0.01, 0.079, 'sell').catch((err) => { console.error(err) });
+// (market, quantity, rate, buyOrSell)
+
 
 const parsePolTicker = (polTicker) => { 
     const parsedData = {}
@@ -30,26 +31,38 @@ const mapTickers = (bit, pol, currencies) => currencies.map((curr) => {
     } : undefined
 }).filter((item) => item);
 
+const pendingTradeWrapper = (trade, params) => {
+   
+}
+
 
 const app = async () => {
-    const tickers = await api.getTickers().catch((err) => { console.error(err) });
+    // const tickers = await api.getTickers().catch((err) => { console.error(err) });
 
-    const prices = mapTickers(tickers.bit.result, parsePolTicker(tickers.pol), config.tokens)
+    // const prices = mapTickers(tickers.bit.result, parsePolTicker(tickers.pol), config.tokens)
 
-    fs.readFile("./log.json", (err, data) => {
-        var json = JSON.parse(data)
-        json.push({date: new Date(), prices: prices})
-        fs.writeFile("./log.json", JSON.stringify(json))
-        fs.writeFile("../chart/data.js", "var data = " + JSON.stringify(json))
+    // fs.readFile("./log.json", (err, data) => {
+    //     var json = JSON.parse(data)
+    //     json.push({date: new Date(), prices: prices})
+    //     fs.writeFile("./log.json", JSON.stringify(json))
+    //     fs.writeFile("../chart/data.js", "var data = " + JSON.stringify(json))
+    // })
+
+    // setTimeout(app, 300000);
+
+    // const sorted = prices.sort((a, b) => {
+    //     return Math.abs(a.buyBit) > Math.abs(a.buyPol) ? Math.abs(a.buyBit) - Math.abs(b.buyBit) : Math.abs(a.buyPol) - Math.abs(b.buyPol);
+    // });
+}
+
+const trade = async () => {
+    const pendingTrades = fs.readFile("./pendingTrades.json", async (err, data) => {
+       return JSON.parse(data)   
     })
 
-    setTimeout(app, 300000);
-
-    const sorted = prices.sort((a, b) => {
-        return Math.abs(a.buyBit) > Math.abs(a.buyPol) ? Math.abs(a.buyBit) - Math.abs(b.buyBit) : Math.abs(a.buyPol) - Math.abs(b.buyPol);
-    });
-
-    console.log(sorted)
+    const tradeResult = await api.makeBittrexOrder('BTC-OMG', 1, 0.00194001, 'sell').catch((err) => { console.error(err) });
+    pendingTrades.push(tradeResult.result.uuid)
+    fs.writeFile("./pendingTrades.json", JSON.stringify(pendingTrades.result.uuid))
 }
 
 app();
