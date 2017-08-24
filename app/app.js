@@ -1,40 +1,9 @@
-const Bittrex = require('node.bittrex.api');
-const Poloniex = require('poloniex-api-node');
+const api = require ('./api.js');
 const fs = require('fs');
 const config = require('./config.js')
 const apikeys = require('./apikeys');
+console.log(api)
 
-Bittrex.options(apikeys.bittrex);
-
-const getTickers = () => new Promise((resolve, reject) => {
-    let bit, pol;
-
-    Bittrex.getmarketsummaries((payload, err) => {
-        if (err) {
-            reject(err)
-        } else {
-            bit = payload;
-            if (pol) resolve({bit, pol});
-        }
-    });
-
-    new Poloniex().returnTicker((err, payload) => {
-        if (err) {
-            reject(err)
-        } else {
-            pol = payload;
-            if (bit) resolve({bit, pol});
-        }
-    });
-});
-
-const makeBittrexOrder = (market, quantity, rate, buyOrSell) => new Promise((resolve, reject) => {
-    const url = `https://bittrex.com/api/v1.1/market/${buyOrSell}limit?apikey=${apikeys.bittrex.apikey}&market=${market}&quantity=${quantity}&rate=${rate}`;
-    Bittrex.sendCustomRequest(url, (data, err) => {
-        if (err) reject(err)
-        else resolve(data);
-    }, true);
-});
 // await makeBittrexOrder('BTC-ETH', 0.01, 0.079, 'sell').catch((err) => { console.error(err) });
 
 const parsePolTicker = (polTicker) => { 
@@ -63,7 +32,7 @@ const mapTickers = (bit, pol, currencies) => currencies.map((curr) => {
 
 
 const app = async () => {
-    const tickers = await getTickers().catch((err) => { console.error(err) });
+    const tickers = await api.getTickers().catch((err) => { console.error(err) });
 
     const prices = mapTickers(tickers.bit.result, parsePolTicker(tickers.pol), config.tokens)
 
