@@ -1,5 +1,3 @@
-exports.bittrex = {}
-
 exports.poloMargin = ["ETH", "LTC", "XRP", "BTS", "STR", "DASH", "XMR", "FCT", "MAID", "DOGE", "CLAM"] // 
 exports.tokens = [ // all coins that could trade on Bittrex for BTC as of August 3rd 2017
   "BCC",
